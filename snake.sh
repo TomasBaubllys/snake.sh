@@ -34,7 +34,7 @@ cleanup() {
 
 generate_food(){
 	food_x=$(( (RANDOM % cols) & ~1 ))
-	food_y=$(( (RANDOM % rows) ))
+	food_y=$(( (RANDOM % rows ) ))
 	# echo "$food_x,$food_y "
 }
 
@@ -50,6 +50,14 @@ draw_food(){
 	tput cup "$food_y" "$food_x"
 	echo -ne "$color"
 	printf "%*s" $FOOD_CHAR_WIDTH " "
+	printf '\e8'
+}
+
+draw_footer() {
+	echo -ne "$RESET"
+	printf '\e7'
+	tput cup "$cols" 0
+	echo -n "Score: ${#snake[@]} | q - quit"
 	printf '\e8'
 }
 
@@ -132,21 +140,16 @@ done
 
 # game loop
 while true; do
-	draw_snake
-	# draw_food
-
 	# check for food colision
 	IFS=',' read -r head_x head_y <<< "${snake[0]}"
 	if [[ $head_x -eq $food_x && $head_y -eq $food_y ]]; then
 		draw_food $GREEN
 		snake_eat_food
 		generate_food
-		draw_food
 	fi
 
 	# echo "food: $food_x,$food_y, snake: ${snake[0]}" >> log.txt
 	# check for bounds colision
-
 	if (( head_x < 0 && dir_x == -1 \
 		|| head_x + SNAKE_CHAR_WIDTH > cols \
 		|| head_y < 0 && dir_y == -1 \
@@ -155,18 +158,46 @@ while true; do
 	fi
 
 	# check for snake with body colision
+	for segment in "${snake[@]:1}"; do
+		IFS=',' read -r seg_x seg_y <<< "$segment"
+		if (( head_x == seg_x && head_y == seg_y )); then
+			exit;
+		fi
+	done
 
 	key=$(read_key)
 
 	if [[ -n $key ]]; then
 		case "$key" in
-			$'\e[A') dir_x=0; dir_y=-1 ;;
-			$'\e[B') dir_x=0; dir_y=1 ;;
-			$'\e[C') dir_x=1; dir_y=0 ;;
-			$'\e[D') dir_x=-1; dir_y=0 ;;
+			$'\e[A')
+				if (( dir_y != 1 )); then
+		 			dir_x=0; dir_y=-1
+				fi
+			;;
+			$'\e[B')
+				if (( dir_y != -1 )); then
+					dir_x=0; dir_y=1
+				fi
+			;;
+			$'\e[C')
+				if (( dir_x != -1 )); then
+		 			dir_x=1; dir_y=0
+				fi
+			;;
+			$'\e[D')
+				if(( dir_x != 1 )); then
+					dir_x=-1; dir_y=0
+				fi
+			;;
+			$'q')
+				exit
+			;;
 		esac
 	fi
 	# echo "$dir_x$dir_y"
+	draw_footer
+	draw_snake
+	draw_food
 	move_snake
 	sleep 0.05
 done
