@@ -2,6 +2,7 @@
 
 # constants
 SNAKE_CHAR_WIDTH=2
+FOOD_CHAR_WIDTH=2
 START_SIZE=3
 START_ROW=0
 START_COL=0
@@ -20,18 +21,45 @@ snake_size=${#snake[@]}
 dir_x=1
 dir_y=0
 
+food_x=0
+food_y=0
+
 cleanup() {
+	stty sane
 	tput cnorm
+	tput "$RESET"
+	clear
 }
 
+generate_food(){
+	food_x=$(( (RANDOM % cols) & ~1 ))
+	food_y=$(( (RANDOM % rows) ))
+	# echo "$food_x,$food_y "
+}
+
+snake_eat_food() {
+	snake+=("${snake[$snake_size - 1]}")
+	snake_size="${#snake[@]}"
+}
+
+# if no arguments - red, otherwise specified color
+draw_food(){
+	color=${1:-$RED}
+	printf '\e7'
+	tput cup "$food_y" "$food_x"
+	echo -ne "$color"
+	printf "%*s" $FOOD_CHAR_WIDTH " "
+	printf '\e8'
+}
+
+# update later so that we only draw the new head and delete the old tail
 draw_snake() {
 	echo -ne "$GREEN"
 
-	for segment in "${snake[@]}"; do
-		IFS=',' read -r col row <<< $segment
-		tput cup "$row" "$col"
-		printf "%*s" $SNAKE_CHAR_WIDTH " "
-	done
+	# draw only the head
+	IFS=',' read -r col row <<< ${snake[0]}
+	tput cup "$row" "$col"
+	printf "%*s" $SNAKE_CHAR_WIDTH " "
 
 	echo -ne "$RESET"
 
@@ -87,9 +115,38 @@ stty -echo -icanon time 0 min 0
 # clear the terminal
 tput clear
 
+# generate initial coords
+generate_food
+
+# draw initial food
+draw_food
+
+# draw initial snake
+echo -ne $GREEN
+for segment in "${snake[@]}"; do
+	IFS=',' read -r col row <<< "$segment"
+	tput cup "$row" "$col"
+	printf "%*s" $SNAKE_CHAR_WIDTH " "
+done
+
 # game loop
 while true; do
 	draw_snake
+	# draw_food
+
+	# check for food colision
+	IFS=',' read -r head_x head_y <<< "${snake[0]}"
+	if [[ $head_x -eq $food_x && $head_y -eq $food_y ]]; then
+		draw_food $GREEN
+		snake_eat_food
+		generate_food
+		draw_food
+	fi
+
+	echo "food: $food_x,$food_y, snake: ${snake[0]}" >> log.txt
+	# check for bounds colision
+
+	# check for snake with body colision
 
 	key=$(read_key)
 
@@ -106,6 +163,6 @@ while true; do
 	sleep 0.05
 done
 
-stty sane
+EXIT
 
 #echo -e "$GREEN $rows, $cols"
