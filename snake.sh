@@ -29,6 +29,7 @@ cleanup() {
 	tput cnorm
 	tput "$RESET"
 	clear
+	echo -e "$(tput setaf 1)$(tput bold)Game over... $RESET\nScore: ${#snake[@]}"
 }
 
 generate_food(){
@@ -143,8 +144,15 @@ while true; do
 		draw_food
 	fi
 
-	echo "food: $food_x,$food_y, snake: ${snake[0]}" >> log.txt
+	# echo "food: $food_x,$food_y, snake: ${snake[0]}" >> log.txt
 	# check for bounds colision
+
+	if (( head_x < 0 && dir_x == -1 \
+		|| head_x + SNAKE_CHAR_WIDTH > cols \
+		|| head_y < 0 && dir_y == -1 \
+		|| head_y > rows)); then
+		exit
+	fi
 
 	# check for snake with body colision
 
