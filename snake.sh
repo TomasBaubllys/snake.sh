@@ -33,7 +33,7 @@ cleanup() {
 }
 
 generate_food(){
-	food_x=$(( (RANDOM % cols) & ~1 ))
+	food_x=$(( (RANDOM % cols - 1) & ~1 ))
 	food_y=$(( (RANDOM % rows ) ))
 	# echo "$food_x,$food_y "
 }
